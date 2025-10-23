@@ -26,10 +26,17 @@ class VNet(nn.Module):
         self.recurrent_n = args["recurrent_n"]
         self.tpdv = dict(dtype=torch.float32, device=device)
         init_method = get_init_method(self.initialization_method)
-
-        cent_obs_shape = get_shape_from_obs_space(cent_obs_space)
-        base = CNNBase if len(cent_obs_shape) == 3 else MLPBase
-        self.base = base(args, cent_obs_shape)
+        
+        self.use_transformer_critic=args["use_transformer_critic"]
+        
+        if self.use_transformer_critic:
+            cent_obs_shape = get_shape_from_obs_space(cent_obs_space)
+            base = TransformerBasedCritic
+            self.base = base(args, (cent_obs_shape[0] / args["num_agents"]))
+        else:
+            cent_obs_shape = get_shape_from_obs_space(cent_obs_space)
+            base = CNNBase if len(cent_obs_shape) == 3 else MLPBase
+            self.base = base(args, cent_obs_shape)
 
         if self.use_naive_recurrent_policy or self.use_recurrent_policy:
             self.rnn = RNNLayer(
@@ -63,6 +70,11 @@ class VNet(nn.Module):
         critic_features = self.base(cent_obs)
         if self.use_naive_recurrent_policy or self.use_recurrent_policy:
             critic_features, rnn_states = self.rnn(critic_features, rnn_states, masks)
-        values = self.v_out(critic_features)
+
+        if self.use_transformer_critic:
+            values = critic_features[0]
+            attn   = critic_features[1]
+        else:
+            values = self.v_out(critic_features)
 
         return values, rnn_states

@@ -15,6 +15,7 @@ def main():
         default="happo",
         choices=[
             "happo",
+            "happo_debug",
             "hatrpo",
             "haa2c",
             "haddpg",
@@ -40,6 +41,9 @@ def main():
             "dexhands",
             "smacv2",
             "lag",
+            "bsk",
+            "bsk_single_sat",
+            "bsk_het"
         ],
         help="Environment name. Choose from: smac, mamujoco, pettingzoo_mpe, gym, football, dexhands, smacv2, lag.",
     )

@@ -13,15 +13,15 @@ device:
   torch_threads: 4
 train:
   # number of parallel environments for training data collection
-  n_rollout_threads: 20 #20
+  n_rollout_threads: 1
   # number of total training steps
-  num_env_steps: 1000000 #1000000
+  num_env_steps: 1000000
   # number of steps per environment per training data collection
   episode_length: 200
   # logging interval
-  log_interval: 5 #5
+  log_interval: 1
   # evaluation interval
-  eval_interval: 10 #10
+  eval_interval: 2
   # whether to use ValueNorm
   use_valuenorm: True
   # whether to use linear learning rate decay
@@ -29,19 +29,19 @@ train:
   # whether to consider the case of truncation when an episode is done
   use_proper_time_limits: True
   # if set, load models from this directory; otherwise, randomly initialise the models
-  model_dir: #/home/hady/project/CLSHARL/results/bsk/sar_opt/happo/exp1/seed-00000-2025-10-07-17-12-33/models
+  model_dir: ~
 eval:
   # whether to use evaluation
   use_eval: True
   # number of parallel environments for evaluation
-  n_eval_rollout_threads: 5 #5
+  n_eval_rollout_threads: 1
   # number of episodes per evaluation
-  eval_episodes: 10 #10
+  eval_episodes: 5
 render:
   # whether to use render
   use_render: False
   # number of episodes to render
-  render_episodes: 1
+  render_episodes: 10
 model:
   # network parameters
   # hidden sizes for mlp module in the network
@@ -56,9 +56,9 @@ model:
   gain: 0.01
   # recurrent parameters
   # whether to use rnn policy (data is not chunked for training)
-  use_naive_recurrent_policy: True
+  use_naive_recurrent_policy: False
   # whether to use rnn policy (data is chunked for training)
-  use_recurrent_policy: False
+  use_recurrent_policy: True
   # number of recurrent layers
   recurrent_n: 1
   # length of data chunk; only useful when use_recurrent_policy is True; episode_length has to be a multiple of data_chunk_length

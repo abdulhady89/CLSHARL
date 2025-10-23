@@ -15,13 +15,13 @@ train:
   # number of parallel environments for training data collection
   n_rollout_threads: 20
   # number of total training steps
-  num_env_steps: 10000000
+  num_env_steps: 1000000
   # number of steps per environment per training data collection
   episode_length: 200
   # logging interval
   log_interval: 5
   # evaluation interval
-  eval_interval: 25
+  eval_interval: 10
   # whether to use ValueNorm
   use_valuenorm: True
   # whether to use linear learning rate decay
@@ -34,9 +34,9 @@ eval:
   # whether to use evaluation
   use_eval: True
   # number of parallel environments for evaluation
-  n_eval_rollout_threads: 10
+  n_eval_rollout_threads: 5
   # number of episodes per evaluation
-  eval_episodes: 20
+  eval_episodes: 10
 render:
   # whether to use render
   use_render: False
@@ -45,7 +45,7 @@ render:
 model:
   # network parameters
   # hidden sizes for mlp module in the network
-  hidden_sizes: [128, 128]
+  hidden_sizes: [64, 64]
   # activation function, choose from sigmoid, tanh, relu, leaky_relu, selu
   activation_func: relu
   # whether to use feature normalization
@@ -56,7 +56,7 @@ model:
   gain: 0.01
   # recurrent parameters
   # whether to use rnn policy (data is not chunked for training)
-  use_naive_recurrent_policy: False
+  use_naive_recurrent_policy: True
   # whether to use rnn policy (data is chunked for training)
   use_recurrent_policy: False
   # number of recurrent layers
@@ -113,9 +113,9 @@ algo:
   # method of aggregating the probability of multi-dimensional actions, choose from prod, mean
   action_aggregation: prod
   # whether to share parameter among actors
-  share_param: True
+  share_param: False
   # whether to use a fixed optimisation order
-  fixed_order: True
+  fixed_order: False
 logger:
   # logging directory
   log_dir: "./results"

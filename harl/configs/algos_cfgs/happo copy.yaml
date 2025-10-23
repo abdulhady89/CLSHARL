@@ -44,6 +44,9 @@ render:
   render_episodes: 1
 model:
   # network parameters
+  # number of agents
+  num_agents: 3
+  agent_types: [0,0,1] # it is a code of agent types identity (Optical satellite is 0 and SAR satellite is 1)
   # hidden sizes for mlp module in the network
   hidden_sizes: [64, 64]
   # activation function, choose from sigmoid, tanh, relu, leaky_relu, selu
@@ -54,6 +57,8 @@ model:
   initialization_method: orthogonal_
   # gain of the output layer of the network.
   gain: 0.01
+  # use transformer critic or not
+  use_transformer_critic: False
   # recurrent parameters
   # whether to use rnn policy (data is not chunked for training)
   use_naive_recurrent_policy: True

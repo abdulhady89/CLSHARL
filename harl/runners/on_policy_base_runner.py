@@ -46,16 +46,16 @@ class OnPolicyBaseRunner:
         self.fixed_order = algo_args["algo"]["fixed_order"]
         set_seed(algo_args["seed"])
         self.device = init_device(algo_args["device"])
-        if not self.algo_args["render"]["use_render"]:  # train, not render
-            self.run_dir, self.log_dir, self.save_dir, self.writter = init_dir(
-                args["env"],
-                env_args,
-                args["algo"],
-                args["exp_name"],
-                algo_args["seed"]["seed"],
-                logger_path=algo_args["logger"]["log_dir"],
-            )
-            save_config(args, algo_args, env_args, self.run_dir)
+        # if not self.algo_args["render"]["use_render"]:  # train, not render
+        self.run_dir, self.log_dir, self.save_dir, self.writter = init_dir(
+            args["env"],
+            env_args,
+            args["algo"],
+            args["exp_name"],
+            algo_args["seed"]["seed"],
+            logger_path=algo_args["logger"]["log_dir"],
+        )
+        save_config(args, algo_args, env_args, self.run_dir)
         # set the title of the process
         setproctitle.setproctitle(
             str(args["algo"]) + "-" + str(args["env"]) + "-" + str(args["exp_name"])
@@ -162,15 +162,16 @@ class OnPolicyBaseRunner:
             else:
                 self.value_normalizer = None
 
-            self.logger = LOGGER_REGISTRY[args["env"]](
-                args, algo_args, env_args, self.num_agents, self.writter, self.run_dir
-            )
+        self.logger = LOGGER_REGISTRY[args["env"]](
+            args, algo_args, env_args, self.num_agents, self.writter, self.run_dir
+        )
         if self.algo_args["train"]["model_dir"] is not None:  # restore model
             self.restore()
 
     def run(self):
         """Run the training (or rendering) pipeline."""
         if self.algo_args["render"]["use_render"] is True:
+            self.logger.init(self.algo_args["render"]["render_episodes"])
             self.render()
             return
         print("start running")
@@ -594,9 +595,11 @@ class OnPolicyBaseRunner:
     def render(self):
         """Render the model."""
         print("start rendering")
+        
         if self.manual_expand_dims:
             # this env needs manual expansion of the num_of_parallel_envs dimension
-            for _ in range(self.algo_args["render"]["render_episodes"]):
+            for ep in range(self.algo_args["render"]["render_episodes"]):
+                self.logger.episode_init(ep)
                 eval_obs, _, eval_available_actions = self.envs.reset()
                 eval_obs = np.expand_dims(np.array(eval_obs), axis=0)
                 eval_available_actions = (
@@ -617,6 +620,8 @@ class OnPolicyBaseRunner:
                     (self.env_num, self.num_agents, 1), dtype=np.float32
                 )
                 rewards = 0
+                self.logger.eval_init()
+                render_step = 0
                 while True:
                     eval_actions_collector = []
                     for agent_id in range(self.num_agents):
@@ -637,7 +642,7 @@ class OnPolicyBaseRunner:
                         _,
                         eval_rewards,
                         eval_dones,
-                        _,
+                        eval_infos,
                         eval_available_actions,
                     ) = self.envs.step(eval_actions[0])
                     rewards += eval_rewards[0][0]
@@ -647,6 +652,8 @@ class OnPolicyBaseRunner:
                         if eval_available_actions is not None
                         else None
                     )
+                    self.logger.log_render(eval_infos[0],render_step)
+                    render_step += 1
                     if self.manual_render:
                         self.envs.render()
                     if self.manual_delay:

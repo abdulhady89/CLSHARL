@@ -23,7 +23,7 @@ train:
   # ratio of training iterations to train_interval
   update_per_train: 1
   # logging interval (currently unused)
-  log_interval: ~
+  log_interval: 1000
   # evaluation interval
   eval_interval: 10000
   # whether to use linear learning rate decay
@@ -47,7 +47,7 @@ render:
 model:
   # network parameters
   # hidden sizes for mlp module in the network
-  hidden_sizes: [128, 128]
+  hidden_sizes: [64, 64]
   # activation function, choose from sigmoid, tanh, relu, leaky_relu, selu
   activation_func: relu
   # final activation function, choose from sigmoid, tanh, relu, leaky_relu, selu
