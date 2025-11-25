@@ -59,7 +59,13 @@ def main():
     parser.add_argument(
         "--model_path",
         type=str,
-        default="/newEra/maxsum/project/CLSHARL/result_collection/single_sat/easy/mappo/seed-00001-2025-10-16-17-58-27/models",
+        default="/home/hady/project/CLSHARL/results/result_collection/single_sat/easy/mappo/seed-00000-2025-10-16-16-32-51/models",
+        help="If set, load model file from this path.",
+    )
+    parser.add_argument(
+        "--env_key",
+        type=str,
+        default="single_sat-easy",
         help="If set, load model file from this path.",
     )
 
@@ -91,6 +97,8 @@ def main():
     algo_args['render']['use_render'] = True
     algo_args['render']['render_episodes'] = 1
     algo_args['train']['model_dir'] = args['model_path']
+    env_args['use_render'] =  False
+    env_args['key'] = args['env_key']
 
     # start render
     from harl.runners import RUNNER_REGISTRY

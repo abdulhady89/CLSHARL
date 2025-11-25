@@ -16,7 +16,7 @@
   # 5) Randomness of Attitude control disturbance: "random_dist"
   # 6) Randomness of All resources + target location and priority: "random_res_n_target"
 
-key: "het_cluster-easy-random_res_n_target" # Please follow the keyword format above!
+key: "het_cluster-easy" # Please follow the keyword format above!
 
 
 # Satellites
@@ -29,7 +29,7 @@ battery_capacity: 400
 memory_size: 500000
 baud_rate: 100
 instr_baud_rate: 500
-init_battery_level: 100
+init_battery_level: 80
 init_memory_percent: 0
 
 # Reward params

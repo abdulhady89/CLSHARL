@@ -107,7 +107,7 @@ class ClusterbskEnv:
         self._obs = self._pad_observation(obs)
         dones = done or trunc
         s_obs = self.repeat(self.get_state())
-        
+        env_time = self.env.simulator.sim_time
         power_usage_total = 0.0
         data_downlink_total = 0.0
         for sat in self.satellite_names:
@@ -144,6 +144,7 @@ class ClusterbskEnv:
         # self.img_cost.append(float(reward))
         # self._info[f'img_cost'] = np.mean(self.img_cost)
         self._info[f'img_cost'] = reward
+        self._info[f'time'] = env_time
         reward += -1*power_usage_total + data_downlink_total
         self._past_obs = self._obs
 

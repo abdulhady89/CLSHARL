@@ -26,7 +26,7 @@ def make_BSK_SingleSat_env(env_args, optim_challenge, randomness=None):
     arg_periapsis = 0           # Argument of Periapsis (omega), fixed for all
 
     # True anomaly offsets for spacing satellites along the Cluster orbit
-    true_anomaly_offset = 60  # degrees
+    true_anomaly_offset = -75  # degrees
     orbit = random_orbit(
             i=inclination, alt=altitude, e=eccentricity, Omega=LAN, omega=arg_periapsis, f=true_anomaly_offset
         ) # By giving a specific value of the orbital parameters, we fix the orbit and skip the random orbit generator function

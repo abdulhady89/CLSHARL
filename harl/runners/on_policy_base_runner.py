@@ -660,6 +660,7 @@ class OnPolicyBaseRunner:
                         time.sleep(0.1)
                     if eval_dones[0]:
                         print(f"total reward of this episode: {rewards}")
+                        # self.logger.eval_log(ep,rewards)
                         break
         else:
             # this env does not need manual expansion of the num_of_parallel_envs dimension
