@@ -2,6 +2,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from harl.envs.bsk.make_cluster_bsk import make_BSK_Cluster_env,make_BSK_Walker_env,make_BSK_SAR_OPT_env
+from harl.envs.bsk.make_cluster_bsk import make_BSK_FLOCK_env
 from harl.envs.bsk.make_single_sat_bsk import make_BSK_SingleSat_env
 from gymnasium.spaces import Discrete, Box
 from gymnasium.spaces import flatdim
@@ -40,6 +41,11 @@ class ClusterbskEnv:
         elif bsk_scenario == "het_cluster":
             self.env = make_BSK_SAR_OPT_env(env_args,task_challenge,randomness_key)
             print("Running BSK-ENV with 1 SAR and 2 OPTICAL satellites cluster scenario")
+
+        elif bsk_scenario == "hmg_flock":
+            self.env = make_BSK_FLOCK_env(env_args,task_challenge,randomness_key)
+            print("Running BSK-ENV with FLOCK OPTICAL satellites cluster scenario")
+        
         else:
             print("Scenario name not available")
             NotImplementedError
@@ -159,7 +165,7 @@ class ClusterbskEnv:
     
     def reset(self):
         """Returns initial observations and states"""
-        obs, info = self.env.reset(seed=0)
+        obs, info = self.env.reset()
         self._obs = self._pad_observation(obs)
         self._past_obs = self._obs
         s_obs = self.repeat(self.get_state())
