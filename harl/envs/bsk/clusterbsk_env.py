@@ -1,15 +1,15 @@
+from harl.envs.bsk.make_cluster_bsk import make_BSK_Cluster_env, make_BSK_Walker_env, make_BSK_SAR_OPT_env
+from munch import Munch
+import copy
+import numpy as np
+from gymnasium.spaces import flatdim
+from gymnasium.spaces import Discrete, Box
+from harl.envs.bsk.make_single_sat_bsk import make_BSK_SingleSat_env
+from harl.envs.bsk.make_cluster_bsk import make_BSK_SAR_OPT_CLOUD_env
+from harl.envs.bsk.make_cluster_bsk import make_BSK_FLOCK_env
 import warnings
 warnings.filterwarnings("ignore")
 
-from harl.envs.bsk.make_cluster_bsk import make_BSK_Cluster_env,make_BSK_Walker_env,make_BSK_SAR_OPT_env
-from harl.envs.bsk.make_cluster_bsk import make_BSK_FLOCK_env
-from harl.envs.bsk.make_single_sat_bsk import make_BSK_SingleSat_env
-from gymnasium.spaces import Discrete, Box
-from gymnasium.spaces import flatdim
-
-import numpy as np
-import copy
-from munch import Munch
 
 class ClusterbskEnv:
     def __init__(self, args):
@@ -17,35 +17,46 @@ class ClusterbskEnv:
         env_args = Munch.fromDict(self.args)
         bsk_scenario = env_args.key.split('-')[0]
 
-        if len(env_args.key.split('-'))>1:
+        if len(env_args.key.split('-')) > 1:
             task_challenge = env_args.key.split('-')[1]
-            randomness_key=None
-            
-            if len(env_args.key.split('-'))==3:
-                randomness_key=env_args.key.split('-')[2]
+            randomness_key = None
+
+            if len(env_args.key.split('-')) == 3:
+                randomness_key = env_args.key.split('-')[2]
         else:
-            randomness_key=None
+            randomness_key = None
 
         if bsk_scenario == "single_sat":
-            self.env = make_BSK_SingleSat_env(env_args,task_challenge,randomness_key)
+            self.env = make_BSK_SingleSat_env(
+                env_args, task_challenge, randomness_key)
             print("Running BSK-ENV with single satellite scenario")
 
         elif bsk_scenario == "walker":
-            self.env = make_BSK_Walker_env(env_args,self.satellite_names,bsk_scenario[1])
+            self.env = make_BSK_Walker_env(
+                env_args, self.satellite_names, bsk_scenario[1])
             print("Running BSK-ENV with walker-delta scenario")
-            
+
         elif bsk_scenario == "hmg_cluster":
-            self.env = make_BSK_Cluster_env(env_args,task_challenge,randomness_key)
+            self.env = make_BSK_Cluster_env(
+                env_args, task_challenge, randomness_key)
             print("Running BSK-ENV with 3 Optical satellites cluster scenario")
 
         elif bsk_scenario == "het_cluster":
-            self.env = make_BSK_SAR_OPT_env(env_args,task_challenge,randomness_key)
+            self.env = make_BSK_SAR_OPT_env(
+                env_args, task_challenge, randomness_key)
             print("Running BSK-ENV with 1 SAR and 2 OPTICAL satellites cluster scenario")
 
         elif bsk_scenario == "hmg_flock":
-            self.env = make_BSK_FLOCK_env(env_args,task_challenge,randomness_key)
+            self.env = make_BSK_FLOCK_env(
+                env_args, task_challenge, randomness_key)
             print("Running BSK-ENV with FLOCK OPTICAL satellites cluster scenario")
-        
+
+        elif bsk_scenario == "het_cloud_cluster":
+            self.env = make_BSK_SAR_OPT_CLOUD_env(
+                env_args, task_challenge, randomness_key)
+            print(
+                "Running BSK-ENV with 1-Cloud detector, 2-OPTICAL, 1 SAR satellites cluster scenario")
+
         else:
             print("Scenario name not available")
             NotImplementedError
@@ -53,8 +64,9 @@ class ClusterbskEnv:
         self.satellite_names = []
         for i in range(env_args.n_satellites):
             self.satellite_names.append(f"Sat-{i}")
-        
-        self.longest_action_space = max(self.env.action_space, key=lambda x: x.n)
+
+        self.longest_action_space = max(
+            self.env.action_space, key=lambda x: x.n)
         self.action_names = []
         self.action_names.append("Charge")
         self.action_names.append("Downlink")
@@ -87,7 +99,6 @@ class ClusterbskEnv:
         self.share_observation_space = [self.get_state_size()]
         self.action_space = [self.longest_action_space]*self.n_agents
 
-
         if self.env.action_space.__class__.__name__ == "Box":
             self.discrete = False
         else:
@@ -105,7 +116,7 @@ class ClusterbskEnv:
             for o in obs
         ]
 
-    def step(self,actions):
+    def step(self, actions):
         """
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
@@ -127,26 +138,28 @@ class ClusterbskEnv:
                 # Add power usage reward
                 if power_usage_gen < 0:
                     battery_usage = -1*power_usage_gen*100
-                    battery_cost = self.battery_cost_scale * battery_usage * (1 - self._past_obs[i][1].item())
+                    battery_cost = self.battery_cost_scale * \
+                        battery_usage * (1 - self._past_obs[i][1].item())
                     power_usage_total += battery_cost
-            
+
             if self.data_reward:
                 # Add downlinked data reward
                 if obs[i][0].item() < self._past_obs[i][0].item():
-                    downlinked = (self._past_obs[i][0].item() - obs[i][0].item()) * 100
+                    downlinked = (
+                        self._past_obs[i][0].item() - obs[i][0].item()) * 100
                     downlinked_cost = downlinked * self.data_cost_scale
                     data_downlink_total += downlinked_cost
                     self.downlinked[f'{sat}'] = downlinked
 
             # Track battery for satellite `sat`
-            self._info[f'{sat}-batt']=obs[i][1].item()
+            self._info[f'{sat}-batt'] = obs[i][1].item()
             self._info[f'{sat}-power_usage_gen'] = power_usage_gen
             # Track memory for satellite `sat`
-            self._info[f'{sat}-mem']=obs[i][0].item()
+            self._info[f'{sat}-mem'] = obs[i][0].item()
             self._info[f'{sat}-downlinked'] = self.downlinked[f'{sat}']
             act = [int(a) for a in actions]
             self._info[f'{sat}-{self.action_names[act[i]]}'] = 1
-        
+
         # self.img_cost.append(float(reward))
         # self._info[f'img_cost'] = np.mean(self.img_cost)
         self._info[f'img_cost'] = reward
@@ -155,17 +168,17 @@ class ClusterbskEnv:
         self._past_obs = self._obs
 
         return (
-                self._obs,
-                s_obs,
-                self.n_agents*[[reward]],
-                self.n_agents*[dones],
-                self.n_agents*[self._info],
-                self.get_avail_actions(),
-            )
-    
+            self._obs,
+            s_obs,
+            self.n_agents*[[reward]],
+            self.n_agents*[dones],
+            self.n_agents*[self._info],
+            self.get_avail_actions(),
+        )
+
     def reset(self):
         """Returns initial observations and states"""
-        obs, info = self.env.reset()
+        obs, info = self.env.reset(seed=0)
         self._obs = self._pad_observation(obs)
         self._past_obs = self._obs
         s_obs = self.repeat(self.get_state())
@@ -178,7 +191,6 @@ class ClusterbskEnv:
 
         return self._obs, s_obs, self.get_avail_actions()
 
-    
     def get_avail_actions(self):
         if self.discrete:
             avail_actions = []
@@ -194,7 +206,7 @@ class ClusterbskEnv:
         valid = flatdim(self.env.action_space[agent_id]) * [1]
         invalid = [0] * (self.longest_action_space.n - len(valid))
         return valid + invalid
-    
+
     def get_state_size(self):
         """Returns the shape of the state"""
         if hasattr(self.env.unwrapped, "state_size"):
@@ -212,7 +224,7 @@ class ClusterbskEnv:
 
     def get_state(self):
         return np.concatenate(self._obs, axis=0).astype(np.float32)
-    
+
     def render(self):
         pass
         # self.env.render()
