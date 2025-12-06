@@ -11,11 +11,20 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
+#For recording purpose
+import pandas as pd
+from datetime import datetime, timedelta
+import csv
+import os
+from pathlib import Path
+
+
 class ClusterbskEnv:
     def __init__(self, args):
         self.args = copy.deepcopy(args)
         env_args = Munch.fromDict(self.args)
         bsk_scenario = env_args.key.split('-')[0]
+        print(bsk_scenario)
 
         if len(env_args.key.split('-')) > 1:
             task_challenge = env_args.key.split('-')[1]
@@ -61,6 +70,7 @@ class ClusterbskEnv:
             print("Scenario name not available")
             NotImplementedError
 
+
         self.satellite_names = []
         for i in range(env_args.n_satellites):
             self.satellite_names.append(f"Sat-{i}")
@@ -71,7 +81,9 @@ class ClusterbskEnv:
         self.action_names.append("Charge")
         self.action_names.append("Downlink")
         self.action_names.append("Desaturate")
-        for i in range((self.longest_action_space.n)-3):
+        self.action_names.append("Drift")
+        # for i in range((self.longest_action_space.n)-3):
+        for i in range((self.longest_action_space.n)-4):
             self.action_names.append(f"Image_Target_{i}")
 
         self.n_agents = len(self.satellite_names)
@@ -105,6 +117,18 @@ class ClusterbskEnv:
             self.discrete = True
         self.avail_actions = self.get_avail_actions()
 
+        # print(self.action_names)
+        self.action_frequencies = {
+                sat: {action: 0 for action in self.action_names} for i, sat in enumerate(self.satellite_names)}
+        # print(self.action_frequencies)
+        
+
+        # For recording purpose
+        # print(self.args)
+        self.capture_records = []
+        self.simulation_start_time =  datetime.strptime(self.args['start_datetime'], '%Y-%m-%d %H:%M:%S')
+        self.simulation_end_time = None
+
     def _pad_observation(self, obs):
         return [
             np.pad(
@@ -121,6 +145,8 @@ class ClusterbskEnv:
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
         obs, reward, done, trunc, info = self.env.step(actions.flatten())
+        print("actions: ",actions)
+
         self._obs = self._pad_observation(obs)
         dones = done or trunc
         s_obs = self.repeat(self.get_state())
@@ -132,6 +158,27 @@ class ClusterbskEnv:
                 self._info[f'{sat}-{action_name}'] = 0
 
         for i, sat in enumerate(self.satellite_names):
+            n_acts = len(self.action_names)
+            act = actions[i][0]
+            
+            if act > 3: 
+                print("sat: ",i, " action: ",act, " action: ", self.action_names[act])
+                satellite = self.env.satellites[i]
+                
+                point_id = satellite.parse_target_selection(act)
+
+
+                self.log_capture(
+                    satellite_name=sat,
+                    point_id=point_id,
+                    lat=0,
+                    lon=0,
+                    priority=1,
+                    timestamp_seconds=env_time,
+                    target_name=None
+                )
+
+
             power_usage_gen = obs[i][1].item()-self._past_obs[i][1].item()
             downlinked = 0.0
             if self.power_reward:
@@ -159,6 +206,11 @@ class ClusterbskEnv:
             self._info[f'{sat}-downlinked'] = self.downlinked[f'{sat}']
             act = [int(a) for a in actions]
             self._info[f'{sat}-{self.action_names[act[i]]}'] = 1
+
+            # print("i: ", i)
+            # print("Sat: ", sat)
+            # print("Action: ",self.action_names[act[i]])
+            self.action_frequencies[sat][self.action_names[act[i]]] += 1
 
         # self.img_cost.append(float(reward))
         # self._info[f'img_cost'] = np.mean(self.img_cost)
@@ -203,6 +255,11 @@ class ClusterbskEnv:
 
     def get_avail_agent_actions(self, agent_id):
         """Returns the available actions for agent_id"""
+        # print(self.env.action_space)
+        # print(agent_id)
+        # if(agent_id >= len(self.env.action_space)) :
+        #     return None
+
         valid = flatdim(self.env.action_space[agent_id]) * [1]
         invalid = [0] * (self.longest_action_space.n - len(valid))
         return valid + invalid
@@ -249,3 +306,104 @@ class ClusterbskEnv:
 
     def repeat(self, a):
         return [a for _ in range(self.n_agents)]
+
+
+
+
+    def log_capture(self, satellite_name, point_id, lat, lon, priority, timestamp_seconds, target_name):
+        # global capture_records, simulation_start_time
+        
+        capture_datetime = self.seconds_to_datetime(
+            timestamp_seconds, self.simulation_start_time)
+
+        real_sat_name = {'Sat-0': 'OPT-FLOCK 4Q-34',
+                      'Sat-1': 'OPT-FLOCK 4Q-35',  
+                      'Sat-2': 'OPT-FLOCK 4Q-36'  }
+    #     satellite_names.append(f"OPT-FLOCK 4Q-34")
+    # satellite_names.append(f"OPT-FLOCK 4Q-35")
+    # satellite_names.append(f"OPT-FLOCK 4Q-36")
+
+        record = {
+            'satellite': real_sat_name[satellite_name],
+            'point_id': point_id,
+            'lat': round(lat, 4),
+            'lon': round(lon, 4),
+            'priority': round(priority, 2),
+            'capture_time': capture_datetime,
+            'target_name': target_name
+        }
+        self.capture_records.append(record)
+        print(
+            f"  [CAPTURED] {satellite_name} → Target {point_id} at {capture_datetime.strftime('%H:%M:%S')}")
+
+
+    # def save_capture_records(self, output_dir):
+    def save_capture_records(self,):
+        # global capture_records, simulation_start_time, simulation_end_time
+
+        print(os.system("pwd"))
+
+        input_csv_path = Path(os.path.realpath(__file__)).parent.parent.parent.parent.parent / \
+            "iodata" / "WP4_input_new_flock.csv"
+
+        # output_dir = Path(os.path.realpath(__file__)).parent / \
+        #     "_dat" / "ocean" 
+        output_dir = Path(os.path.realpath(__file__)).parent.parent.parent.parent.parent / \
+            "iodata" 
+
+        if not os.path.exists(input_csv_path):
+            raise FileNotFoundError(
+                f"WP4_input_new_flock.csv not found at {input_csv_path}")
+
+        df_in = pd.read_csv(input_csv_path)
+        df_in['n_captured'] = 0
+        df_in['t_last_capture'] = ''
+        df_in['last_captured_by'] = ''
+
+
+        print(df_in.head())
+        print(df_in.dtypes)
+        df_in = df_in.convert_dtypes(str)
+        # df_in['point_id'].astype(str)
+        # list_id = df_in['point_id'].astype(str)
+        # print(list_id)
+        print(df_in.dtypes)
+        # print(df_in.iloc[25, 1])
+        # print(df_in.iloc[25, 1] == '2025-01-01|1456|-32.17501|152.14967|25')
+        # print(df_in[df_in['point_id'] == '2025-01-01|1456|-32.17501|152.14967|25'].index[0])
+
+        # for rec in capture_records:
+        #     print(rec['point_id'])
+
+        n_cap = 0
+        for record in self.capture_records:            
+            point_id = int(record['point_id'].name)
+            # row_idx =  df_in[df_in['point_id'] == point_id].index[0]
+            row_idx =  df_in[df_in['point_id'] == point_id].index
+            # print("point_id: ", record['point_id'].name, " index: ", row_idx)
+            # point_id = point_id.replace('Target(','')
+            # point_id = point_id.replace(')','')
+            # df_in.loc[point_id, 'n_captured'] = df_in.loc[point_id, 'n_captured'] + 1
+            # df_in.loc[point_id, 't_last_capture'] = record['capture_time']
+            # df_in.loc[point_id, 'captured_by'] = record['satellite']
+
+            df_in.iloc[row_idx, -3] = df_in.iloc[row_idx, -3] + 1
+            df_in.iloc[row_idx, -2] = str(record['capture_time'])
+            df_in.iloc[row_idx, -1] = record['satellite']
+            n_cap = n_cap + 1
+
+        df_cap = df_in[df_in['n_captured'] > 0]
+        print("Total captured targets: ",df_cap.shape[0])
+        print("N_capturing actions: ", n_cap)
+
+
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, "Op2_output_from_WP3_to_WP4_by_RL.csv")
+        # output_path = os.path.join(output_dir, self.args.out_file_name)
+        print(output_path)
+        df_in.to_csv(output_path, index=False)
+   
+
+
+    def seconds_to_datetime(self, seconds, start_datetime):
+        return start_datetime + timedelta(seconds=seconds)

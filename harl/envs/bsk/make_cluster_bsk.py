@@ -700,7 +700,12 @@ def make_BSK_FLOCK_env(env_args, optim_challenge, randomness=None):
     LAN = [48.8444, 48.5746, 48.5827]
     # Argument of Periapsis (omega), fixed for all
     arg_periapsis = [159.6904, 170.914, 175.8923]
-    offset = [200.4666, 189.2268, 184.239]
+    # offset = [200.4666, 189.2268, 184.239]
+    # offset = [160.434, 149.22, 144.232] #
+    offset = [150.434, 139.22, 134.232] #
+    # offset = [155.434, 145.22, 139.232] #
+    # offset = [170.434, 159.22, 154.232] #
+    # offset = [140.434, 129.22, 124.232] #
 
     orbit_ls = []
     for i in range(len(satellite_names)):
@@ -798,8 +803,9 @@ def make_BSK_FLOCK_env(env_args, optim_challenge, randomness=None):
             K3=3.0,
             imageAttErrorRequirement=0.01,
             imageRateErrorRequirement=0.01,
-            imageTargetMinimumElevation=np.radians(
-                83),  # np.arctan(800 / 500),
+            # imageTargetMinimumElevation=np.radians(
+            #     83),  # np.arctan(800 / 500),
+            imageTargetMinimumElevation=np.arctan(800 / 500),
             # Memory:
             dataStorageCapacity=memory_size * 8e6,
             storageInit=int(memory_size * init_memory_percent/100) * 8e6 if not random_init_memory
@@ -864,10 +870,14 @@ def make_BSK_FLOCK_env(env_args, optim_challenge, randomness=None):
                 obs.Time(),
             ]
             action_spec = [
-                act.Charge(duration=5.0),
-                act.Downlink(duration=5.0),
-                act.Desat(duration=5.0),
-                act.Drift(duration=5.0),
+                # act.Charge(duration=5.0),
+                # act.Downlink(duration=5.0),
+                # act.Desat(duration=5.0),
+                # act.Drift(duration=5.0),
+                act.Charge(duration=20.0),
+                act.Downlink(duration=20.0),
+                act.Desat(duration=20.0),
+                act.Drift(duration=20.0),
                 act.Image(n_ahead_image=env_args.n_act_image),
             ]
             fsw_type = fsw.SteeringImagerFSWModel
@@ -882,8 +892,9 @@ def make_BSK_FLOCK_env(env_args, optim_challenge, randomness=None):
 
     env = GeneralSatelliteTasking(
         satellites=multiSat,
-        scenario=scene.UniformTargetswithRandomCloud(
-            target_total) if randomize_target else scene.UserDefOceanTargetswithCloud(target_total),
+        # scenario=scene.UniformTargetswithRandomCloud(
+        #     target_total) if randomize_target else scene.UserDefOceanTargetswithCloud(target_total),
+        scenario=scene.UserDefOceanTargetswithCloud(target_total),
         rewarder=data.UniqueImageReward(),
         time_limit=duration,
         communicator=comm.LOSCommunication(),

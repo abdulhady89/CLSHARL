@@ -652,7 +652,9 @@ class OnPolicyBaseRunner:
                         if eval_available_actions is not None
                         else None
                     )
-                    self.logger.log_render(eval_infos[0],render_step)
+
+                    # self.logger.log_render(eval_infos[0],render_step)
+                    
                     render_step += 1
                     if self.manual_render:
                         self.envs.render()
@@ -661,7 +663,23 @@ class OnPolicyBaseRunner:
                     if eval_dones[0]:
                         print(f"total reward of this episode: {rewards}")
                         # self.logger.eval_log(ep,rewards)
+                        # break
+
+
+                        print(f'Action Counts per Satellite:')
+                        # print(self.envs.action_frequencies)
+
+                        for i, sat in enumerate(self.envs.satellite_names):
+                            print(f'  {sat}:')
+                            for action, count in self.envs.action_frequencies[sat].items():
+                                # print(f'    {self.envs.action_names[action]}: {count} times')
+                                print(f'    {action}: {count} times')
+
+                        self.envs.save_capture_records()
                         break
+
+
+
         else:
             # this env does not need manual expansion of the num_of_parallel_envs dimension
             # such as dexhands, which instantiates a parallel env of 64 pair of hands

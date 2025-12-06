@@ -22,17 +22,18 @@ key: "het_cloud_cluster-easy-random_res_n_target" # Please follow the keyword fo
 
 
 # Satellites
-# n_satellites: 3
-# n_act_image: 3
-# n_obs_image: 3
+n_satellites: 3
+n_act_image: 3
+n_obs_image: 3
 
-n_satellites: 4
-n_act_image: 4
-n_obs_image: 4
+# n_satellites: 4
+# n_act_image: 4
+# n_obs_image: 4
 
 # Resources params
 battery_capacity: 400
-memory_size: 500000
+# memory_size: 500000
+memory_size: 5000
 baud_rate: 100
 instr_baud_rate: 500
 init_battery_level: 100
@@ -45,7 +46,8 @@ data_reward : True
 data_cost_scale : 100.0
 
 # Orbits
-orbit_num: 0.25
+# orbit_num: 0.25
+orbit_num: 2.0
 
 # Targets
 uniform_targets: 2000
@@ -55,4 +57,10 @@ randomize_enabled: False
 failure_penalty: -100
 
 # Rendering
-use_render: False
+# use_render: False
+use_render: True
+
+
+#Recording
+start_datetime: "2025-01-01 22:35:00"
+out_file_name: "Op2_output_from_WP3_to_WP4_by_RL.csv"
