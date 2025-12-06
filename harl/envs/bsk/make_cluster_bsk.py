@@ -941,7 +941,7 @@ def make_BSK_SAR_OPT_CLOUD_env(env_args, optim_challenge, randomness=None):
         init_battery_level = 85
         memory_size = env_args.memory_size
         init_memory_percent = 60
-        baud_rate = int(0.3 * env_args.baud_rate)
+        baud_rate = int(0.5 * env_args.baud_rate)
         random_init_memory = False
         random_init_battery = False
         random_disturbance = False
@@ -1233,7 +1233,7 @@ def make_BSK_SAR_OPT_CLOUD_env(env_args, optim_challenge, randomness=None):
 
     env = GeneralSatelliteTasking(
         satellites=multiSat,
-        scenario=scene.UniformTargetswithRandomCloud(
+        scenario=scene.RandomOceanTargetswithCloud(
             target_total) if randomize_target else scene.UserDefAUOceanTargetswithCloud(target_total),
         rewarder=data.UniqueCloudDetectImageSARReward(),
         time_limit=duration,

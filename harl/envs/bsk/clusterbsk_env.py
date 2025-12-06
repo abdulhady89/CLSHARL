@@ -60,10 +60,17 @@ class ClusterbskEnv:
         else:
             print("Scenario name not available")
             NotImplementedError
-
-        self.satellite_names = []
-        for i in range(env_args.n_satellites):
-            self.satellite_names.append(f"Sat-{i}")
+        
+        if bsk_scenario == "het_cloud_cluster":
+            self.satellite_names = []
+            self.satellite_names.append(f"OPT-1-Sat")
+            self.satellite_names.append(f"OPT-2-Sat")
+            self.satellite_names.append(f"OPT-3-Sat")
+            self.satellite_names.append(f"SAR-Sat")
+        else:
+            self.satellite_names = []
+            for i in range(env_args.n_satellites):
+                self.satellite_names.append(f"Sat-{i}")
 
         self.longest_action_space = max(
             self.env.action_space, key=lambda x: x.n)
@@ -78,19 +85,22 @@ class ClusterbskEnv:
         self.downlinked = {}
         self._info = {}
         self._obs = None
+        # self._obs = [sat.get_obs() for sat in self.env.satellites]
+        # self._obs = self._pad_observation(self._obs)
 
         for sat in self.satellite_names:
             for action_name in self.action_names:
-                self._info[f'{sat}-{action_name}'] = 0
-            self.downlinked[f'{sat}'] = []
-        self.img_cost = []
+                self._info[f'{sat}-{action_name}'] = 0.0
+            self.downlinked[f'{sat}'] = 0.0
+        self.img_cost = 0.0
+        self.imaged = 0
 
         self.power_reward = env_args.power_reward
         self.battery_cost_scale = env_args.battery_cost_scale
         self.data_reward = env_args.data_reward
         self.data_cost_scale = env_args.data_cost_scale
 
-        self.past_obs = self._obs
+        self._past_obs = self._obs
 
         self.longest_observation_space = max(
             self.env.observation_space, key=lambda x: x.shape
@@ -127,6 +137,9 @@ class ClusterbskEnv:
         env_time = self.env.simulator.sim_time
         power_usage_total = 0.0
         data_downlink_total = 0.0
+        if self._past_obs==None:
+            self._past_obs=self._obs
+
         for sat in self.satellite_names:
             for action_name in self.action_names:
                 self._info[f'{sat}-{action_name}'] = 0
@@ -162,8 +175,13 @@ class ClusterbskEnv:
 
         # self.img_cost.append(float(reward))
         # self._info[f'img_cost'] = np.mean(self.img_cost)
-        self._info[f'img_cost'] = reward
-        self._info[f'time'] = env_time
+        self._info['img_cost'] = reward
+        if reward!=0.0: 
+            self.imaged += 1 
+            self._info['imaged'] = self.imaged
+            print(f'Current total AoI imaged: {self.imaged}')
+        print(f'Sim time: {env_time:.2f}')
+        self._info['time'] = env_time
         reward += -1*power_usage_total + data_downlink_total
         self._past_obs = self._obs
 
@@ -178,16 +196,17 @@ class ClusterbskEnv:
 
     def reset(self):
         """Returns initial observations and states"""
-        obs, info = self.env.reset(seed=0)
+        obs, info = self.env.reset()
         self._obs = self._pad_observation(obs)
         self._past_obs = self._obs
         s_obs = self.repeat(self.get_state())
         self._info = {}
-        self.img_cost = []
+        self.img_cost = 0.0
+        self.imaged = 0
         for sat in self.satellite_names:
             for action_name in self.action_names:
-                self._info[f'{sat}-{action_name}'] = 0
-            self.downlinked[f'{sat}'] = 0
+                self._info[f'{sat}-{action_name}'] = 0.0
+            self.downlinked[f'{sat}'] = 0.0
 
         return self._obs, s_obs, self.get_avail_actions()
 

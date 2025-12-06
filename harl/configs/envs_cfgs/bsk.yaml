@@ -18,8 +18,8 @@
   # 5) Randomness of Attitude control disturbance: "random_dist"
   # 6) Randomness of All resources + target location and priority: "random_res_n_target"
 
-key: "het_cloud_cluster-easy-random_res_n_target" # Please follow the keyword format above!
-
+key: "het_cloud_cluster-hard-random_res_n_target" # Please follow the keyword format above!
+# key: "het_cloud_cluster-hard"
 
 # Satellites
 # n_satellites: 3
@@ -32,7 +32,7 @@ n_obs_image: 4
 
 # Resources params
 battery_capacity: 400
-memory_size: 500000
+memory_size: 5000
 baud_rate: 100
 instr_baud_rate: 500
 init_battery_level: 100
@@ -40,9 +40,9 @@ init_memory_percent: 0
 
 # Reward params
 power_reward : True
-battery_cost_scale : 100.0
+battery_cost_scale : 10.0
 data_reward : True
-data_cost_scale : 100.0
+data_cost_scale : 10.0
 
 # Orbits
 orbit_num: 0.25

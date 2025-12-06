@@ -25,6 +25,7 @@ def main():
             "maddpg",
             "matd3",
             "mappo",
+            "rulebased",
         ],
         help="Algorithm name. Choose from: happo, hatrpo, haa2c, haddpg, hatd3, hasac, had3qn, maddpg, matd3, mappo.",
     )
@@ -97,7 +98,7 @@ def main():
     algo_args['render']['use_render'] = True
     algo_args['render']['render_episodes'] = 1
     algo_args['train']['model_dir'] = args['model_path']
-    env_args['use_render'] = True
+    env_args['use_render'] = False
     env_args['key'] = args['env_key']
 
     # start render

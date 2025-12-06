@@ -600,7 +600,15 @@ class OnPolicyBaseRunner:
             # this env needs manual expansion of the num_of_parallel_envs dimension
             for ep in range(self.algo_args["render"]["render_episodes"]):
                 self.logger.episode_init(ep)
-                eval_obs, _, eval_available_actions = self.envs.reset()
+
+                # eval_obs, _, eval_available_actions = self.envs.reset()
+                if self.args['env']!='bsk':
+                    eval_obs, _, eval_available_actions = self.envs.reset()
+                else:
+                    _obs = [sat.get_obs() for sat in self.envs.env.satellites]
+                    eval_obs = self.envs._pad_observation(_obs)
+                    eval_available_actions = self.envs.get_avail_actions()
+
                 eval_obs = np.expand_dims(np.array(eval_obs), axis=0)
                 eval_available_actions = (
                     np.expand_dims(np.array(eval_available_actions), axis=0)
@@ -652,7 +660,9 @@ class OnPolicyBaseRunner:
                         if eval_available_actions is not None
                         else None
                     )
-                    self.logger.log_render(eval_infos[0],render_step)
+                    if self.args['env']=='bsk':
+                        if self.env_args['use_render']==False:
+                            self.logger.log_render(eval_infos[0],render_step)
                     render_step += 1
                     if self.manual_render:
                         self.envs.render()
