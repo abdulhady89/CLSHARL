@@ -1,3 +1,8 @@
+from pathlib import Path
+import os
+import csv
+from datetime import datetime, timedelta
+import pandas as pd
 from harl.envs.bsk.make_cluster_bsk import make_BSK_Cluster_env, make_BSK_Walker_env, make_BSK_SAR_OPT_env
 from munch import Munch
 import copy
@@ -11,12 +16,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-#For recording purpose
-import pandas as pd
-from datetime import datetime, timedelta
-import csv
-import os
-from pathlib import Path
+# For recording purpose
 
 
 class ClusterbskEnv:
@@ -70,10 +70,22 @@ class ClusterbskEnv:
             print("Scenario name not available")
             NotImplementedError
 
-
+        # Satellite names based on its cluster type
         self.satellite_names = []
-        for i in range(env_args.n_satellites):
-            self.satellite_names.append(f"Sat-{i}")
+        if bsk_scenario == "het_cloud_cluster":
+            self.satellite_names.append(f"OPT-1-Sat")
+            self.satellite_names.append(f"OPT-2-Sat")
+            self.satellite_names.append(f"OPT-3-Sat")
+            self.satellite_names.append(f"SAR-Sat")
+
+        elif bsk_scenario == "hmg_flock":
+            self.satellite_names.append(f"OPT-FLOCK 4Q-34")
+            self.satellite_names.append(f"OPT-FLOCK 4Q-35")
+            self.satellite_names.append(f"OPT-FLOCK 4Q-36")
+
+        else:
+            for i in range(env_args.n_satellites):
+                self.satellite_names.append(f"OPT-Sat-{i}")
 
         self.longest_action_space = max(
             self.env.action_space, key=lambda x: x.n)
@@ -94,15 +106,16 @@ class ClusterbskEnv:
         for sat in self.satellite_names:
             for action_name in self.action_names:
                 self._info[f'{sat}-{action_name}'] = 0
-            self.downlinked[f'{sat}'] = []
-        self.img_cost = []
+            self.downlinked[f'{sat}'] = 0.0
+        self.img_cost = 0.0
+        self.imaged = 0
 
         self.power_reward = env_args.power_reward
         self.battery_cost_scale = env_args.battery_cost_scale
         self.data_reward = env_args.data_reward
         self.data_cost_scale = env_args.data_cost_scale
 
-        self.past_obs = self._obs
+        self._past_obs = self._obs
 
         self.longest_observation_space = max(
             self.env.observation_space, key=lambda x: x.shape
@@ -119,14 +132,14 @@ class ClusterbskEnv:
 
         # print(self.action_names)
         self.action_frequencies = {
-                sat: {action: 0 for action in self.action_names} for i, sat in enumerate(self.satellite_names)}
+            sat: {action: 0 for action in self.action_names} for i, sat in enumerate(self.satellite_names)}
         # print(self.action_frequencies)
-        
 
         # For recording purpose
         # print(self.args)
         self.capture_records = []
-        self.simulation_start_time =  datetime.strptime(self.args['start_datetime'], '%Y-%m-%d %H:%M:%S')
+        self.simulation_start_time = datetime.strptime(
+            self.args['start_datetime'], '%Y-%m-%d %H:%M:%S')
         self.simulation_end_time = None
 
     def _pad_observation(self, obs):
@@ -145,7 +158,7 @@ class ClusterbskEnv:
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
         obs, reward, done, trunc, info = self.env.step(actions.flatten())
-        print("actions: ",actions)
+        print("actions: ", actions)
 
         self._obs = self._pad_observation(obs)
         dones = done or trunc
@@ -153,6 +166,10 @@ class ClusterbskEnv:
         env_time = self.env.simulator.sim_time
         power_usage_total = 0.0
         data_downlink_total = 0.0
+
+        if self._past_obs == None:
+            self._past_obs = self._obs
+
         for sat in self.satellite_names:
             for action_name in self.action_names:
                 self._info[f'{sat}-{action_name}'] = 0
@@ -160,13 +177,13 @@ class ClusterbskEnv:
         for i, sat in enumerate(self.satellite_names):
             n_acts = len(self.action_names)
             act = actions[i][0]
-            
-            if act > 3: 
-                print("sat: ",i, " action: ",act, " action: ", self.action_names[act])
-                satellite = self.env.satellites[i]
-                
-                point_id = satellite.parse_target_selection(act)
 
+            if act > 3:
+                print("sat: ", i, " action: ", act,
+                      " action: ", self.action_names[act])
+                satellite = self.env.satellites[i]
+
+                point_id = satellite.parse_target_selection(act)
 
                 self.log_capture(
                     satellite_name=sat,
@@ -177,7 +194,6 @@ class ClusterbskEnv:
                     timestamp_seconds=env_time,
                     target_name=None
                 )
-
 
             power_usage_gen = obs[i][1].item()-self._past_obs[i][1].item()
             downlinked = 0.0
@@ -215,6 +231,11 @@ class ClusterbskEnv:
         # self.img_cost.append(float(reward))
         # self._info[f'img_cost'] = np.mean(self.img_cost)
         self._info[f'img_cost'] = reward
+        if reward != 0.0:
+            self.imaged += 1
+        self._info['imaged'] = self.imaged
+        print(f'Current total AoI imaged: {self.imaged}')
+        print(f'Sim time: {env_time:.2f}')
         self._info[f'time'] = env_time
         reward += -1*power_usage_total + data_downlink_total
         self._past_obs = self._obs
@@ -235,11 +256,12 @@ class ClusterbskEnv:
         self._past_obs = self._obs
         s_obs = self.repeat(self.get_state())
         self._info = {}
-        self.img_cost = []
+        self.img_cost = 0.0
+        self.imaged = 0
         for sat in self.satellite_names:
             for action_name in self.action_names:
-                self._info[f'{sat}-{action_name}'] = 0
-            self.downlinked[f'{sat}'] = 0
+                self._info[f'{sat}-{action_name}'] = 0.0
+            self.downlinked[f'{sat}'] = 0.0
 
         return self._obs, s_obs, self.get_avail_actions()
 
@@ -307,24 +329,21 @@ class ClusterbskEnv:
     def repeat(self, a):
         return [a for _ in range(self.n_agents)]
 
-
-
-
     def log_capture(self, satellite_name, point_id, lat, lon, priority, timestamp_seconds, target_name):
         # global capture_records, simulation_start_time
-        
+
         capture_datetime = self.seconds_to_datetime(
             timestamp_seconds, self.simulation_start_time)
 
-        real_sat_name = {'Sat-0': 'OPT-FLOCK 4Q-34',
-                      'Sat-1': 'OPT-FLOCK 4Q-35',  
-                      'Sat-2': 'OPT-FLOCK 4Q-36'  }
+        # real_sat_name = {'Sat-0': 'OPT-FLOCK 4Q-34',
+        #                  'Sat-1': 'OPT-FLOCK 4Q-35',
+        #                  'Sat-2': 'OPT-FLOCK 4Q-36'}
     #     satellite_names.append(f"OPT-FLOCK 4Q-34")
     # satellite_names.append(f"OPT-FLOCK 4Q-35")
     # satellite_names.append(f"OPT-FLOCK 4Q-36")
 
         record = {
-            'satellite': real_sat_name[satellite_name],
+            'satellite': satellite_name,
             'point_id': point_id,
             'lat': round(lat, 4),
             'lon': round(lon, 4),
@@ -336,8 +355,8 @@ class ClusterbskEnv:
         print(
             f"  [CAPTURED] {satellite_name} → Target {point_id} at {capture_datetime.strftime('%H:%M:%S')}")
 
-
     # def save_capture_records(self, output_dir):
+
     def save_capture_records(self,):
         # global capture_records, simulation_start_time, simulation_end_time
 
@@ -347,9 +366,9 @@ class ClusterbskEnv:
             "iodata" / "WP4_input_new_flock.csv"
 
         # output_dir = Path(os.path.realpath(__file__)).parent / \
-        #     "_dat" / "ocean" 
+        #     "_dat" / "ocean"
         output_dir = Path(os.path.realpath(__file__)).parent.parent.parent.parent.parent / \
-            "iodata" 
+            "iodata"
 
         if not os.path.exists(input_csv_path):
             raise FileNotFoundError(
@@ -359,7 +378,6 @@ class ClusterbskEnv:
         df_in['n_captured'] = 0
         df_in['t_last_capture'] = ''
         df_in['last_captured_by'] = ''
-
 
         print(df_in.head())
         print(df_in.dtypes)
@@ -376,10 +394,10 @@ class ClusterbskEnv:
         #     print(rec['point_id'])
 
         n_cap = 0
-        for record in self.capture_records:            
+        for record in self.capture_records:
             point_id = int(record['point_id'].name)
             # row_idx =  df_in[df_in['point_id'] == point_id].index[0]
-            row_idx =  df_in[df_in['point_id'] == point_id].index
+            row_idx = df_in[df_in['point_id'] == point_id].index
             # print("point_id: ", record['point_id'].name, " index: ", row_idx)
             # point_id = point_id.replace('Target(','')
             # point_id = point_id.replace(')','')
@@ -393,17 +411,15 @@ class ClusterbskEnv:
             n_cap = n_cap + 1
 
         df_cap = df_in[df_in['n_captured'] > 0]
-        print("Total captured targets: ",df_cap.shape[0])
+        print("Total captured targets: ", df_cap.shape[0])
         print("N_capturing actions: ", n_cap)
 
-
         os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, "Op2_output_from_WP3_to_WP4_by_RL.csv")
+        output_path = os.path.join(
+            output_dir, "Op1_output_from_WP3_to_WP4_by_RuleBased.csv")
         # output_path = os.path.join(output_dir, self.args.out_file_name)
         print(output_path)
         df_in.to_csv(output_path, index=False)
-   
-
 
     def seconds_to_datetime(self, seconds, start_datetime):
         return start_datetime + timedelta(seconds=seconds)

@@ -58,7 +58,8 @@ class OnPolicyBaseRunner:
         save_config(args, algo_args, env_args, self.run_dir)
         # set the title of the process
         setproctitle.setproctitle(
-            str(args["algo"]) + "-" + str(args["env"]) + "-" + str(args["exp_name"])
+            str(args["algo"]) + "-" + str(args["env"]) +
+            "-" + str(args["exp_name"])
         )
 
         # set the config of env
@@ -143,14 +144,16 @@ class OnPolicyBaseRunner:
                 # EP stands for Environment Provided, as phrased by MAPPO paper.
                 # In EP, the global states for all agents are the same.
                 self.critic_buffer = OnPolicyCriticBufferEP(
-                    {**algo_args["train"], **algo_args["model"], **algo_args["algo"]},
+                    {**algo_args["train"], **algo_args["model"],
+                        **algo_args["algo"]},
                     share_observation_space,
                 )
             elif self.state_type == "FP":
                 # FP stands for Feature Pruned, as phrased by MAPPO paper.
                 # In FP, the global states for all agents are different, and thus needs the dimension of the number of agents.
                 self.critic_buffer = OnPolicyCriticBufferFP(
-                    {**algo_args["train"], **algo_args["model"], **algo_args["algo"]},
+                    {**algo_args["train"], **algo_args["model"],
+                        **algo_args["algo"]},
                     share_observation_space,
                     self.num_agents,
                 )
@@ -183,7 +186,8 @@ class OnPolicyBaseRunner:
             // self.algo_args["train"]["n_rollout_threads"]
         )
 
-        self.logger.init(episodes)  # logger callback at the beginning of training
+        # logger callback at the beginning of training
+        self.logger.init(episodes)
 
         for episode in range(1, episodes + 1):
             if self.algo_args["train"][
@@ -309,7 +313,8 @@ class OnPolicyBaseRunner:
             rnn_state_collector.append(_t2n(rnn_state))
         # (n_agents, n_threads, dim) -> (n_threads, n_agents, dim)
         actions = np.array(action_collector).transpose(1, 0, 2)
-        action_log_probs = np.array(action_log_prob_collector).transpose(1, 0, 2)
+        action_log_probs = np.array(
+            action_log_prob_collector).transpose(1, 0, 2)
         rnn_states = np.array(rnn_state_collector).transpose(1, 0, 2, 3)
 
         # collect values, rnn_states_critic from 1 critic
@@ -330,11 +335,13 @@ class OnPolicyBaseRunner:
             )  # concatenate (n_threads, n_agents, dim) into (n_threads * n_agents, dim)
             # split (n_threads * n_agents, dim) into (n_threads, n_agents, dim)
             values = np.array(
-                np.split(_t2n(value), self.algo_args["train"]["n_rollout_threads"])
+                np.split(
+                    _t2n(value), self.algo_args["train"]["n_rollout_threads"])
             )
             rnn_states_critic = np.array(
                 np.split(
-                    _t2n(rnn_state_critic), self.algo_args["train"]["n_rollout_threads"]
+                    _t2n(
+                        rnn_state_critic), self.algo_args["train"]["n_rollout_threads"]
                 )
             )
 
@@ -348,15 +355,18 @@ class OnPolicyBaseRunner:
             rewards,  # (n_threads, n_agents, 1)
             dones,  # (n_threads, n_agents)
             infos,  # type: list, shape: (n_threads, n_agents)
-            available_actions,  # (n_threads, ) of None or (n_threads, n_agents, action_number)
+            # (n_threads, ) of None or (n_threads, n_agents, action_number)
+            available_actions,
             values,  # EP: (n_threads, dim), FP: (n_threads, n_agents, dim)
             actions,  # (n_threads, n_agents, action_dim)
             action_log_probs,  # (n_threads, n_agents, action_dim)
             rnn_states,  # (n_threads, n_agents, dim)
-            rnn_states_critic,  # EP: (n_threads, dim), FP: (n_threads, n_agents, dim)
+            # EP: (n_threads, dim), FP: (n_threads, n_agents, dim)
+            rnn_states_critic,
         ) = data
 
-        dones_env = np.all(dones, axis=1)  # if all agents are done, then env is done
+        # if all agents are done, then env is done
+        dones_env = np.all(dones, axis=1)
         rnn_states[
             dones_env == True
         ] = np.zeros(  # if env is done, then reset rnn_state to all zero
@@ -480,7 +490,8 @@ class OnPolicyBaseRunner:
                 np.concatenate(self.critic_buffer.masks[-1]),
             )
             next_value = np.array(
-                np.split(_t2n(next_value), self.algo_args["train"]["n_rollout_threads"])
+                np.split(_t2n(next_value),
+                         self.algo_args["train"]["n_rollout_threads"])
             )
         self.critic_buffer.compute_returns(next_value, self.value_normalizer)
 
@@ -515,7 +526,8 @@ class OnPolicyBaseRunner:
             dtype=np.float32,
         )
         eval_masks = np.ones(
-            (self.algo_args["eval"]["n_eval_rollout_threads"], self.num_agents, 1),
+            (self.algo_args["eval"]
+             ["n_eval_rollout_threads"], self.num_agents, 1),
             dtype=np.float32,
         )
 
@@ -571,7 +583,8 @@ class OnPolicyBaseRunner:
             )
 
             eval_masks = np.ones(
-                (self.algo_args["eval"]["n_eval_rollout_threads"], self.num_agents, 1),
+                (self.algo_args["eval"]
+                 ["n_eval_rollout_threads"], self.num_agents, 1),
                 dtype=np.float32,
             )
             eval_masks[eval_dones_env == True] = np.zeros(
@@ -595,12 +608,20 @@ class OnPolicyBaseRunner:
     def render(self):
         """Render the model."""
         print("start rendering")
-        
+
         if self.manual_expand_dims:
             # this env needs manual expansion of the num_of_parallel_envs dimension
             for ep in range(self.algo_args["render"]["render_episodes"]):
                 self.logger.episode_init(ep)
-                eval_obs, _, eval_available_actions = self.envs.reset()
+
+                # eval_obs, _, eval_available_actions = self.envs.reset()
+                if self.args['env'] != 'bsk':
+                    eval_obs, _, eval_available_actions = self.envs.reset()
+                else:
+                    _obs = [sat.get_obs() for sat in self.envs.env.satellites]
+                    eval_obs = self.envs._pad_observation(_obs)
+                    eval_available_actions = self.envs.get_avail_actions()
+
                 eval_obs = np.expand_dims(np.array(eval_obs), axis=0)
                 eval_available_actions = (
                     np.expand_dims(np.array(eval_available_actions), axis=0)
@@ -636,7 +657,8 @@ class OnPolicyBaseRunner:
                         )
                         eval_rnn_states[:, agent_id] = _t2n(temp_rnn_state)
                         eval_actions_collector.append(_t2n(eval_actions))
-                    eval_actions = np.array(eval_actions_collector).transpose(1, 0, 2)
+                    eval_actions = np.array(
+                        eval_actions_collector).transpose(1, 0, 2)
                     (
                         eval_obs,
                         _,
@@ -648,13 +670,16 @@ class OnPolicyBaseRunner:
                     rewards += eval_rewards[0][0]
                     eval_obs = np.expand_dims(np.array(eval_obs), axis=0)
                     eval_available_actions = (
-                        np.expand_dims(np.array(eval_available_actions), axis=0)
+                        np.expand_dims(
+                            np.array(eval_available_actions), axis=0)
                         if eval_available_actions is not None
                         else None
                     )
 
-                    # self.logger.log_render(eval_infos[0],render_step)
-                    
+                    if self.args['env'] == 'bsk':
+                        if self.env_args['use_render'] == False:
+                            self.logger.log_render(eval_infos[0], render_step)
+
                     render_step += 1
                     if self.manual_render:
                         self.envs.render()
@@ -664,7 +689,6 @@ class OnPolicyBaseRunner:
                         print(f"total reward of this episode: {rewards}")
                         # self.logger.eval_log(ep,rewards)
                         # break
-
 
                         print(f'Action Counts per Satellite:')
                         # print(self.envs.action_frequencies)
@@ -677,8 +701,6 @@ class OnPolicyBaseRunner:
 
                         self.envs.save_capture_records()
                         break
-
-
 
         else:
             # this env does not need manual expansion of the num_of_parallel_envs dimension
@@ -712,7 +734,8 @@ class OnPolicyBaseRunner:
                         )
                         eval_rnn_states[:, agent_id] = _t2n(temp_rnn_state)
                         eval_actions_collector.append(_t2n(eval_actions))
-                    eval_actions = np.array(eval_actions_collector).transpose(1, 0, 2)
+                    eval_actions = np.array(
+                        eval_actions_collector).transpose(1, 0, 2)
                     (
                         eval_obs,
                         _,
@@ -777,7 +800,8 @@ class OnPolicyBaseRunner:
             self.actor[agent_id].actor.load_state_dict(policy_actor_state_dict)
         if not self.algo_args["render"]["use_render"]:
             policy_critic_state_dict = torch.load(
-                str(self.algo_args["train"]["model_dir"]) + "/critic_agent" + ".pt"
+                str(self.algo_args["train"]["model_dir"]) +
+                "/critic_agent" + ".pt"
             )
             self.critic.critic.load_state_dict(policy_critic_state_dict)
             if self.value_normalizer is not None:
@@ -786,7 +810,8 @@ class OnPolicyBaseRunner:
                     + "/value_normalizer"
                     + ".pt"
                 )
-                self.value_normalizer.load_state_dict(value_normalizer_state_dict)
+                self.value_normalizer.load_state_dict(
+                    value_normalizer_state_dict)
 
     def close(self):
         """Close environment, writter, and logger."""
@@ -796,6 +821,7 @@ class OnPolicyBaseRunner:
             self.envs.close()
             if self.algo_args["eval"]["use_eval"] and self.eval_envs is not self.envs:
                 self.eval_envs.close()
-            self.writter.export_scalars_to_json(str(self.log_dir + "/summary.json"))
+            self.writter.export_scalars_to_json(
+                str(self.log_dir + "/summary.json"))
             self.writter.close()
             self.logger.close()
