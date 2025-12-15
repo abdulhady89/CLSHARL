@@ -1,9 +1,9 @@
 
 # ARGS
 
-model_path="/home/hady/project/CLSHARL/examples/pretrained/happo/happo_scan_au_hard_models"
+# model_path="/home/hady/project/CLSHARL/examples/pretrained/happo/happo_scan_au_hard_models"
+model_path="/home/hady/project/CLSHARL/examples/pretrained/hatrpo/hatrpo_scan_au_hard_models"
 # model_path="/home/hady/project/CLSHARL/examples/pretrained/mappo/mappo_scan_au_hard_models"
-# model_path="/home/hady/project/CLSHARL/examples/pretrained/hatrpo/hatrpo_scan_au_hard_models"
 # model_path="/home"
 
 
@@ -11,8 +11,8 @@ env_key="het_cloud_cluster-hard"
 # env_key="het_cloud_cluster-hard-random_res_tgt"
 
 
-algo="happo"
-# algo="hatrpo"
+# algo="happo"
+algo="hatrpo"
 # algo="mappo"
 # algo="rulebased"
 

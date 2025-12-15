@@ -42,7 +42,7 @@ init_memory_percent: 0
 power_reward : True
 battery_cost_scale : 10.0
 data_reward : True
-data_cost_scale : 10.0
+data_cost_scale : 0.5
 
 # Orbits
 orbit_num: 0.25
